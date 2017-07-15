@@ -13,7 +13,7 @@ function! s:SortCommaList(list) abort
     for i in range(0, len(l:words) - 1)
         let l:words[i] = substitute(l:words[i], '\s*', '', 'g')
     endfor
-    return join(sort(l:words), ', ')
+    return join(sort(l:words, 'i'), ', ')
 endfunction
 
 function! s:TsSortImports() abort
