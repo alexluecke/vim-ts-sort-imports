@@ -31,7 +31,6 @@ function! s:TsSortImports() abort
     " into:
     "     import { foo } from 'foo';
     call cursor(1, 1)
-    " need to do something for first line... if in position (1,1), the search won't match the import on that line
     let [l:start, l:end] = [search('^import'), search('}')]
     while l:start
         call cursor(l:start, 1)
