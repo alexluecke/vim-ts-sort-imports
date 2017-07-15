@@ -55,7 +55,7 @@ function! s:TsSortImports() abort
 
         silent! s/ \+/ /g
 
-         let [l:start, l:end] = [search('^import'), search('}')]
+        let [l:start, l:end] = [search('^import'), search('}')]
     endwhile
 
     " sort and replace imports that were previously joined to one line
