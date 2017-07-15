@@ -61,8 +61,12 @@ function! s:TsSortImports() abort
     " sort and replace imports that were previously joined to one line
     let [l:start, l:end] = [1, 1]
     call cursor(l:start, 1)
-    while l:start && l:start < line('$')
+    while l:start < line('$')
         let [l:start, l:end] = [search('^import'), search('^$') - 1]
+
+        " stop when import search does not return result
+        if !l:start | break | endif
+
         let l:sorted = sort(getline(l:start, l:end))
         if !empty(l:sorted)
             exec l:start . ',' . l:end . 'delete'
