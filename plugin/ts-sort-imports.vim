@@ -53,6 +53,7 @@ function! s:TsSortImports() abort
             call append(l:start - 1, l:sorted)
         endif
 
+        call cursor(l:start, 1)
         silent! s/ \+/ /g
 
         let [l:start, l:end] = [search('^import'), search('}')]
@@ -62,7 +63,7 @@ function! s:TsSortImports() abort
     let [l:start, l:end] = [1, 1]
     call cursor(l:start, 1)
     while l:start < line('$')
-        let [l:start, l:end] = [search('^import'), search('^$') - 1]
+        let [l:start, l:end] = [search('^import'), search('^\($\|\(import\)\@!.\)') - 1]
 
         " stop when import search does not return result
         if !l:start | break | endif
