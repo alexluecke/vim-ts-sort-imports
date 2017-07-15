@@ -71,7 +71,6 @@ function! s:TsSortImports() abort
                 let l:start += 1
             endfor
         endif
-        break
 
         let l:start = l:end + 1
     endwhile
