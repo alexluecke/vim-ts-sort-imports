@@ -128,11 +128,8 @@ function! s:DoFormatLongLineImports()
                 call append(l:start - 1, line)
             endfor
 
-            " fix indentation
-            for ii in range(0, len(l:lines) - 1)
-                call cursor(l:start + ii, 1)
-                normal! ==
-            endfor
+            " fix indentation for added lines
+            exec l:start . ',' . (l:start + len(l:lines) - 1) . 'normal! =='
         endif
     endwhile
 endfunction
