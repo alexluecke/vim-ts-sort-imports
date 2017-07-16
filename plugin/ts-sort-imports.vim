@@ -7,7 +7,7 @@ augroup tssortimports
   autocmd!
   au BufRead *.ts command! FixImports call <SID>TsSortImports()
 augroup END
-"
+
 " Expected format for import parts:
 "     import { foo } from 'foo';
 let s:import_parts_re = '\([^{]*\){\([^}]\+\)}\(.*$\)'
