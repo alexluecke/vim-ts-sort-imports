@@ -36,7 +36,18 @@ endfunction
 
 function! s:GetImportStartEnd(start_row)
     call cursor(a:start_row, 1)
-    return [search('^import'), search(';')]
+    return [search('^import'), search('; *$')]
+endfunction
+
+function! s:JoinLines(start, end)
+    call cursor(a:start, 1)
+    if a:start != a:end
+        let l:line = join(getline(a:start, a:end))
+        if !empty(l:line)
+            exec a:start . ',' . a:end . 'delete'
+            call append(a:start - 1, l:line)
+        endif
+    endif
 endfunction
 
 function! s:DoOneLinePerImport()
@@ -44,20 +55,16 @@ function! s:DoOneLinePerImport()
     "     import {
     "         foo
     "     } from 'foo';
+    "     import {
+    "         bar
+    "     } from 'bar';
     " into:
     "     import { foo } from 'foo';
+    "     import { bar } from 'bar';
     let [l:start, l:end] = s:GetImportStartEnd(1)
     while l:start
-        call cursor(l:start, 1)
 
-        if l:start != l:end
-            let l:line = join(getline(l:start, l:end))
-            if !empty(l:line)
-                exec l:start . ',' . l:end . 'delete'
-                call append(l:start - 1, l:line)
-            endif
-        endif
-
+        call s:JoinLines(l:start, l:end)
         call s:SortAndReplaceImportLine(l:start)
 
         call cursor(l:start, 1)
