@@ -98,7 +98,7 @@ function! s:DoFormatLongLineImports()
         " 1. Find line that contains import { ... }. Assumes well defined imports.
         " 2. If line is too long, break imports onto new line
         " 3. Break the comma separated import symbols onto new lines
-        " 4. Replace existing import line with new line separated
+        " 4. Replace existing import line with new line separated imports
         let l:start = search('^import')
         let l:line = getline(l:start)
         if l:start && len(l:line) >= 120
