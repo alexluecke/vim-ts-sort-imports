@@ -7,6 +7,10 @@ augroup tssortimports
   autocmd!
   au BufRead *.ts command! FixImports call <SID>TsSortImports()
 augroup END
+"
+" Expected format for import parts:
+"     import { foo } from 'foo';
+let s:import_parts_re = '\([^{]*\){\([^}]\+\)}\(.*$\)'
 
 function! s:SortCommaList(list) abort
     let l:words = split(a:list, ',')
@@ -16,22 +20,33 @@ function! s:SortCommaList(list) abort
     return join(sort(l:words, 'i'), ', ')
 endfunction
 
-function! s:TsSortImports() abort
-    " Expected format for import parts:
-    "     import { foo } from 'foo';
-    let l:import_parts_re = '\([^{]*\){\([^}]\+\)}\(.*$\)'
+function s:GetSortedImportLine(line_pos)
+    let l:line = substitute(getline(a:line_pos), s:import_parts_re, '\2', '')
+    return substitute(getline(a:line_pos), '{ *[^}]* *}', '{ ' . <SID>SortCommaList(l:line) . ' }', '')
+endfunction
 
-    " this will only work if first line is blank
-    call append(0, '')
+function! s:SortAndReplaceImportLine(line_pos) abort
+    " begin sorting the items within the braces: { a, b, c }
+    if getline(a:line_pos) =~ '{[^}]*}'
+        let l:sorted = s:GetSortedImportLine(a:line_pos)
+        exec a:line_pos . ',' . a:line_pos . 'delete'
+        call append(a:line_pos - 1, l:sorted)
+    endif
+endfunction
 
+function! s:GetImportStartEnd(start_row)
+    call cursor(a:start_row, 1)
+    return [search('^import'), search(';')]
+endfunction
+
+function! s:DoOneLinePerImport()
     " makes lines like:
     "     import {
     "         foo
     "     } from 'foo';
     " into:
     "     import { foo } from 'foo';
-    call cursor(1, 1)
-    let [l:start, l:end] = [search('^import'), search('}')]
+    let [l:start, l:end] = s:GetImportStartEnd(1)
     while l:start
         call cursor(l:start, 1)
 
@@ -43,21 +58,16 @@ function! s:TsSortImports() abort
             endif
         endif
 
-        " begin sorting the items within the braces: { a, b, c }
-        call cursor(l:start, 1)
-        if getline('.') =~ '{[^}]*}'
-            let l:line = substitute(getline('.'), l:import_parts_re, '\2', '')
-            let l:sorted = substitute(getline('.'), '{ *[^}]* *}', '{ ' . <SID>SortCommaList(l:line) . ' }', '')
-            exec l:start . ',' . l:start . 'delete'
-            call append(l:start - 1, l:sorted)
-        endif
+        call s:SortAndReplaceImportLine(l:start)
 
         call cursor(l:start, 1)
         silent! s/ \+/ /g
 
-        let [l:start, l:end] = [search('^import'), search('}')]
+        let [l:start, l:end] = s:GetImportStartEnd(l:start)
     endwhile
+endfunction
 
+function! s:DoSortImportBlocks()
     " sort and replace imports that were previously joined to one line
     let [l:start, l:end] = [1, 1]
     call cursor(l:start, 1)
@@ -78,7 +88,9 @@ function! s:TsSortImports() abort
 
         let l:start = l:end + 1
     endwhile
+endfunction
 
+function! s:DoFormatLongLineImports()
     call cursor(1, 1)
     let [l:start, l:end] = [1, 1]
     while l:start
@@ -87,10 +99,10 @@ function! s:TsSortImports() abort
         " 2. If line is too long, break imports onto new line
         " 3. Break the comma separated import symbols onto new lines
         " 4. Replace existing import line with new line separated
-        let l:start = search('import')
+        let l:start = search('^import')
         let l:line = getline(l:start)
         if l:start && len(l:line) >= 120
-            let l:lines = split(substitute(l:line, l:import_parts_re, '\1{\n\2\n}\3', ''), '\n')
+            let l:lines = split(substitute(l:line, s:import_parts_re, '\1{\n\2\n}\3', ''), '\n')
             let l:imports = split(get(l:lines, 1, ''), ', *')
 
             call remove(l:lines, 1)
@@ -116,6 +128,20 @@ function! s:TsSortImports() abort
             endfor
         endif
     endwhile
+endfunction
+
+function! s:FixImportPipeline()
+    call s:DoOneLinePerImport()
+    call s:DoSortImportBlocks()
+    call s:DoFormatLongLineImports()
+endfunction
+
+function! s:TsSortImports() abort
+
+    " this will only work if first line is blank
+    call append(0, '')
+
+    silent! call s:FixImportPipeline()
 
     " delete the added first line
     exec '1,1delete'
