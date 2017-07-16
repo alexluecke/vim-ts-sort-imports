@@ -1,6 +1,6 @@
 # TODO
 
-- Make several items configuration:
+- Make items configurable:
     - max line length
     - line breaking
     - sort case sensitivity
