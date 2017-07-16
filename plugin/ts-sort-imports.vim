@@ -144,6 +144,8 @@ function! s:FixImportPipeline()
 endfunction
 
 function! s:TsSortImports() abort
+    let l:saved_pos = [line('.'), col('.')]
+    let l:saved_line_count = line('$')
 
     " this will only work if first line is blank
     call append(0, '')
@@ -152,6 +154,8 @@ function! s:TsSortImports() abort
 
     " delete the added first line
     exec '1,1delete'
+
+    call cursor(l:saved_pos[0] + (line('$') - l:saved_line_count), l:saved_pos[1])
 endfunction
 
 let &cpo = s:keepcpo
