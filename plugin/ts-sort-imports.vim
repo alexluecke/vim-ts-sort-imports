@@ -84,7 +84,7 @@ function! s:DoSortImportBlocks()
         " stop when import search does not return result
         if !l:start | break | endif
 
-        let l:sorted = sort(getline(l:start, l:end))
+        let l:sorted = sort(getline(l:start, l:end), 'i')
         if !empty(l:sorted)
             exec l:start . ',' . l:end . 'delete'
             for line in l:sorted
