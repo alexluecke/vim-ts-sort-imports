@@ -11,6 +11,7 @@ augroup END
 " Expected format for import parts:
 "     import { foo } from 'foo';
 let s:import_parts_re = '\([^{]*\){\([^}]\+\)}\(.*$\)'
+let s:search_flags = 'W'
 
 function! s:SortCommaList(list) abort
     let l:words = split(a:list, ',')
@@ -36,7 +37,7 @@ endfunction
 
 function! s:GetImportStartEnd(start_row)
     call cursor(a:start_row, 1)
-    return [search('^import'), search('; *$')]
+    return [search('^import', s:search_flags), search('; *$', s:search_flags)]
 endfunction
 
 function! s:JoinLines(start, end)
@@ -67,7 +68,6 @@ function! s:DoOneLinePerImport()
         call s:JoinLines(l:start, l:end)
         call s:SortAndReplaceImportLine(l:start)
 
-        call cursor(l:start, 1)
         silent! s/ \+/ /g
 
         let [l:start, l:end] = s:GetImportStartEnd(l:start)
@@ -77,9 +77,9 @@ endfunction
 function! s:DoSortImportBlocks()
     " sort and replace imports that were previously joined to one line
     let [l:start, l:end] = [1, 1]
-    call cursor(l:start, 1)
     while l:start < line('$')
-        let [l:start, l:end] = [search('^import'), search('^\($\|\(import\)\@!.\)') - 1]
+        call cursor(l:start, 1)
+        let [l:start, l:end] = [search('^import', s:search_flags), search('^\($\|\(import\)\@!.\)', s:search_flags) - 1]
 
         " stop when import search does not return result
         if !l:start | break | endif
@@ -106,7 +106,7 @@ function! s:DoFormatLongLineImports()
         " 2. If line is too long, break imports onto new line
         " 3. Break the comma separated import symbols onto new lines
         " 4. Replace existing import line with new line separated imports
-        let l:start = search('^import')
+        let l:start = search('^import', s:search_flags)
         let l:line = getline(l:start)
         if l:start && len(l:line) >= 120
             let l:lines = split(substitute(l:line, s:import_parts_re, '\1{\n\2\n}\3', ''), '\n')
