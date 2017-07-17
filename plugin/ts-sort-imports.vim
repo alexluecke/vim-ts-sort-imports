@@ -115,10 +115,12 @@ function! s:DoFormatLongLineImports()
             call remove(l:lines, 1)
             for idx in reverse(range(0, len(l:imports) - 1))
                 let l:new_line = substitute(l:imports[idx], '\s*', '', 'g')
-                if idx == len(l:imports) - 1
-                    call insert(l:lines, l:new_line, 1)
-                else
-                    call insert(l:lines, substitute(l:new_line, '$', ',', ''), 1)
+                if !empty(l:new_line)
+                    if idx == len(l:imports) - 1
+                        call insert(l:lines, l:new_line, 1)
+                    else
+                        call insert(l:lines, substitute(l:new_line, '$', ',', ''), 1)
+                    endif
                 endif
             endfor
 
