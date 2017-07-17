@@ -5,7 +5,7 @@ set cpo&vim
 
 augroup tssortimports
   autocmd!
-  au BufRead *.ts command! FixImports call <SID>TsSortImports()
+  au BufRead *.ts command! TsSortImports call <SID>TsSortImports()
 augroup END
 
 " Expected format for import parts:
@@ -134,7 +134,7 @@ function! s:DoFormatLongLineImports()
     endwhile
 endfunction
 
-function! s:FixImportPipeline()
+function! s:SortImportsPipeline()
     call s:DoOneLinePerImport()
     call s:DoSortImportBlocks()
     call s:DoFormatLongLineImports()
@@ -147,7 +147,7 @@ function! s:TsSortImports() abort
     " this will only work if first line is blank
     call append(0, '')
 
-    silent! call s:FixImportPipeline()
+    silent! call s:SortImportsPipeline()
 
     " delete the added first line
     exec '1,1delete'
