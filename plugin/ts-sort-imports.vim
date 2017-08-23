@@ -16,7 +16,9 @@ let s:search_flags = 'W'
 function! s:SortCommaList(list) abort
     let l:words = split(a:list, ',')
     for i in range(0, len(l:words) - 1)
-        let l:words[i] = substitute(l:words[i], '\s*', '', 'g')
+        let l:words[i] = substitute(l:words[i], '\s*$', '', 'g')
+        let l:words[i] = substitute(l:words[i], '^\s*', '', 'g')
+        let l:words[i] = substitute(l:words[i], '\s\+', ' ', 'g')
     endfor
     return join(sort(l:words, 'i'), ', ')
 endfunction
