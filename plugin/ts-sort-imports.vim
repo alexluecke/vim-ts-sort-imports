@@ -68,12 +68,8 @@ function! s:DoOneLinePerImport()
     "     import { bar } from 'bar';
     let [l:start, l:end] = s:GetImportStartEnd(1)
     while l:start
-
         call s:JoinLines(l:start, l:end)
         call s:SortAndReplaceImportLine(l:start)
-
-        silent! s/\s\+/ /g
-
         let [l:start, l:end] = s:GetImportStartEnd(l:start)
     endwhile
 endfunction
