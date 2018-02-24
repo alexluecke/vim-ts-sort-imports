@@ -24,7 +24,7 @@ function! s:AlphaSortCommaList(list) abort
         let l:words[i] = substitute(l:words[i], '^\s*', '', 'g')
         let l:words[i] = substitute(l:words[i], '\s\+', ' ', 'g')
     endfor
-    return join(sort(l:words, 'i'), ', ')
+    return join(sort(uniq(l:words, 'i')), ', ')
 endfunction
 
 function s:GetSortedImportLine(line_pos, sort_f)
