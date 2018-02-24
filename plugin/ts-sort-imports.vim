@@ -35,6 +35,14 @@ function s:GetSortedImportLine(line_pos, sort_f)
     return substitute(getline(a:line_pos), s:import_names_re, '{ ' . call(a:sort_f, [l:line]) . ' }', '')
 endfunction
 
+function! s:SortAndReplaceImportLines()
+    let [l:start, l:end] = s:GetImportStartEnd(1)
+    while l:start
+        call s:SortAndReplaceImportLine(l:start)
+        let [l:start, l:end] = s:GetImportStartEnd(l:start)
+    endwhile
+endfunction
+
 function! s:SortAndReplaceImportLine(line_pos) abort
     " begin sorting the items within the braces: { a, b, c }
     if getline(a:line_pos) =~ s:import_re
@@ -69,7 +77,6 @@ function! s:DoOneLinePerImport()
     let [l:start, l:end] = s:GetImportStartEnd(1)
     while l:start
         call s:JoinLines(l:start, l:end)
-        call s:SortAndReplaceImportLine(l:start)
         let [l:start, l:end] = s:GetImportStartEnd(l:start)
     endwhile
 endfunction
@@ -138,6 +145,7 @@ endfunction
 
 function! s:SortImportsPipeline()
     call s:DoOneLinePerImport()
+    call s:SortAndReplaceImportLines()
     call s:DoSortImportBlocks()
     call s:DoFormatLongLineImports()
 endfunction
