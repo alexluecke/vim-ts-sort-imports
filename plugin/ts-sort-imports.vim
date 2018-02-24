@@ -10,8 +10,10 @@ augroup END
 
 " Expected format for import parts:
 "     import { foo } from 'foo';
-let s:import_start_re = '\(^\s*import\s*\)'
-let s:import_re = join([s:import_start_re, '{\([^}]\+\)}\(.*$\)'], '')
+let s:import_start_re = '^\(\s*import\s*\)'
+let s:import_names_re = '{ *\([^}]\+\) *}'
+let s:import_end_re = '\(.*$\)'
+let s:import_re = join([s:import_start_re, s:import_names_re, s:import_end_re], '')
 let s:search_flags = 'W'
 
 function! s:AlphaSortCommaList(list) abort
@@ -30,7 +32,7 @@ endfunction
 
 function s:GetSortedImportLine(line_pos, sort_f)
     let l:line = substitute(getline(a:line_pos), s:import_re, '\2', '')
-    return substitute(getline(a:line_pos), '{ *[^}]* *}', '{ ' . call(a:sort_f, [l:line]) . ' }', '')
+    return substitute(getline(a:line_pos), s:import_names_re, '{ ' . call(a:sort_f, [l:line]) . ' }', '')
 endfunction
 
 function! s:SortAndReplaceImportLine(line_pos) abort
