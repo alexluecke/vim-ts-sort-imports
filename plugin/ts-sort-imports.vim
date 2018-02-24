@@ -10,7 +10,8 @@ augroup END
 
 " Expected format for import parts:
 "     import { foo } from 'foo';
-let s:import_components_re = '\([^{]*\){\([^}]\+\)}\(.*$\)'
+let s:import_start_re = '\(^\s*import\s*\)'
+let s:import_re = join([s:import_start_re, '{\([^}]\+\)}\(.*$\)'], '')
 let s:search_flags = 'W'
 
 function! s:AlphaSortCommaList(list) abort
@@ -28,13 +29,13 @@ function! s:AlphaSortCommaList(list) abort
 endfunction
 
 function s:GetSortedImportLine(line_pos, sort_f)
-    let l:line = substitute(getline(a:line_pos), s:import_components_re, '\2', '')
+    let l:line = substitute(getline(a:line_pos), s:import_re, '\2', '')
     return substitute(getline(a:line_pos), '{ *[^}]* *}', '{ ' . call(a:sort_f, [l:line]) . ' }', '')
 endfunction
 
 function! s:SortAndReplaceImportLine(line_pos) abort
     " begin sorting the items within the braces: { a, b, c }
-    if getline(a:line_pos) =~ s:import_components_re
+    if getline(a:line_pos) =~ s:import_re
         let l:sorted = s:GetSortedImportLine(a:line_pos, '<SID>AlphaSortCommaList')
         exec a:line_pos . ',' . a:line_pos . 'delete'
         call append(a:line_pos - 1, l:sorted)
@@ -43,18 +44,13 @@ endfunction
 
 function! s:GetImportStartEnd(start_row)
     call cursor(a:start_row, 1)
-    return [search('^import', s:search_flags), search('; *$', s:search_flags)]
+    return [search(s:import_start_re, s:search_flags), search('; *$', s:search_flags)]
 endfunction
 
 function! s:JoinLines(start, end)
-    call cursor(a:start, 1)
-    if a:start != a:end
-        let l:line = join(getline(a:start, a:end))
-        if !empty(l:line)
-            exec a:start . ',' . a:end . 'delete'
-            call append(a:start - 1, l:line)
-        endif
-    endif
+    let l:line = substitute(join(getline(a:start, a:end)), '^\s*', '', '')
+    exec a:start . ',' . a:end . 'delete'
+    call append(a:start - 1, l:line)
 endfunction
 
 function! s:DoOneLinePerImport()
@@ -85,7 +81,7 @@ function! s:DoSortImportBlocks()
     let [l:start, l:end] = [1, 1]
     while l:start < line('$')
         call cursor(l:start, 1)
-        let [l:start, l:end] = [search('^import', s:search_flags), search('^\($\|\(import\)\@!.\)', s:search_flags) - 1]
+        let [l:start, l:end] = [search(s:import_start_re, s:search_flags), search('^\($\|\(import\)\@!.\)', s:search_flags) - 1]
 
         " stop when import search does not return result
         if !l:start | break | endif
@@ -115,7 +111,7 @@ function! s:DoFormatLongLineImports()
         let l:start = search('^import', s:search_flags)
         let l:line = getline(l:start)
         if l:start && len(l:line) >= 120
-            let l:lines = split(substitute(l:line, s:import_components_re, '\1{\n\2\n}\3', ''), '\n')
+            let l:lines = split(substitute(l:line, s:import_re, '\1{\n\2\n}\3', ''), '\n')
             let l:imports = split(get(l:lines, 1, ''), ', *')
 
             call remove(l:lines, 1)
@@ -155,7 +151,7 @@ function! s:TsSortImports() abort
     " this will only work if first line is blank
     call append(0, '')
 
-    silent! call s:SortImportsPipeline()
+    call s:SortImportsPipeline()
 
     " delete the added first line
     exec '1,1delete'
