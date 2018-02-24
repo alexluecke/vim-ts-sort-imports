@@ -10,10 +10,10 @@ augroup END
 
 " Expected format for import parts:
 "     import { foo } from 'foo';
-let s:import_parts_re = '\([^{]*\){\([^}]\+\)}\(.*$\)'
+let s:import_components_re = '\([^{]*\){\([^}]\+\)}\(.*$\)'
 let s:search_flags = 'W'
 
-function! s:SortCommaList(list) abort
+function! s:AlphaSortCommaList(list) abort
     let l:words = split(a:list, ',')
     for i in range(0, len(l:words) - 1)
         " Imports can be formatted as:
@@ -27,15 +27,15 @@ function! s:SortCommaList(list) abort
     return join(sort(l:words, 'i'), ', ')
 endfunction
 
-function s:GetSortedImportLine(line_pos)
-    let l:line = substitute(getline(a:line_pos), s:import_parts_re, '\2', '')
-    return substitute(getline(a:line_pos), '{ *[^}]* *}', '{ ' . <SID>SortCommaList(l:line) . ' }', '')
+function s:GetSortedImportLine(line_pos, sort_f)
+    let l:line = substitute(getline(a:line_pos), s:import_components_re, '\2', '')
+    return substitute(getline(a:line_pos), '{ *[^}]* *}', '{ ' . call(a:sort_f, [l:line]) . ' }', '')
 endfunction
 
 function! s:SortAndReplaceImportLine(line_pos) abort
     " begin sorting the items within the braces: { a, b, c }
-    if getline(a:line_pos) =~ '{[^}]*}'
-        let l:sorted = s:GetSortedImportLine(a:line_pos)
+    if getline(a:line_pos) =~ s:import_components_re
+        let l:sorted = s:GetSortedImportLine(a:line_pos, '<SID>AlphaSortCommaList')
         exec a:line_pos . ',' . a:line_pos . 'delete'
         call append(a:line_pos - 1, l:sorted)
     endif
@@ -74,7 +74,7 @@ function! s:DoOneLinePerImport()
         call s:JoinLines(l:start, l:end)
         call s:SortAndReplaceImportLine(l:start)
 
-        silent! s/ \+/ /g
+        silent! s/\s\+/ /g
 
         let [l:start, l:end] = s:GetImportStartEnd(l:start)
     endwhile
@@ -114,8 +114,8 @@ function! s:DoFormatLongLineImports()
         " 4. Replace existing import line with new line separated imports
         let l:start = search('^import', s:search_flags)
         let l:line = getline(l:start)
-        if l:start && len(l:line) >= &textwidth
-            let l:lines = split(substitute(l:line, s:import_parts_re, '\1{\n\2\n}\3', ''), '\n')
+        if l:start && len(l:line) >= 120
+            let l:lines = split(substitute(l:line, s:import_components_re, '\1{\n\2\n}\3', ''), '\n')
             let l:imports = split(get(l:lines, 1, ''), ', *')
 
             call remove(l:lines, 1)
