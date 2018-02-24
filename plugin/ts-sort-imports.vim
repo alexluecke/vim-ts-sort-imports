@@ -115,7 +115,7 @@ function! s:DoFormatLongLineImports()
         " 4. Replace existing import line with new line separated imports
         let l:start = search('^import', s:search_flags)
         let l:line = getline(l:start)
-        if l:start && len(l:line) >= 120
+        if l:start && len(l:line) >= &textwidth
             let l:lines = split(substitute(l:line, s:import_re, 'import {\n\2\n} from ''\3'';', ''), '\n')
             let l:imports = split(get(l:lines, 1, ''), ', *')
 
