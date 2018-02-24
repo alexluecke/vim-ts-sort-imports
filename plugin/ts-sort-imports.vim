@@ -19,10 +19,10 @@ let s:search_flags = 'W'
 function! s:AlphaSortCommaList(list) abort
     let l:words = split(a:list, ',')
     for i in range(0, len(l:words) - 1)
-        " Imports can be formatted as:
-        "     import { thing as thing2, otherThing } from './thing';
-        " So do not string all whitespace since the import string will become:
-        "     import { thingasthing2, otherThing }  from './thing';
+        " List can be formatted as:
+        "     thing as thing2, otherThing
+        " So do not strip all whitespace since the import string will become:
+        "     thingasthing2, otherThing
         let l:words[i] = substitute(l:words[i], '\s*$', '', 'g')
         let l:words[i] = substitute(l:words[i], '^\s*', '', 'g')
         let l:words[i] = substitute(l:words[i], '\s\+', ' ', 'g')
