@@ -12,7 +12,7 @@ augroup END
 "     import { foo } from 'foo';
 let s:import_start_re = '^\(\s*import\s*\)'
 let s:import_names_re = '{ *\([^}]\+\) *}'
-let s:import_end_re = '\(.*$\)'
+let s:import_end_re = ' *from *''\([^'']\+\)'';$'
 let s:import_re = join([s:import_start_re, s:import_names_re, s:import_end_re], '')
 let s:search_flags = 'W'
 
@@ -113,7 +113,7 @@ function! s:DoFormatLongLineImports()
         let l:start = search('^import', s:search_flags)
         let l:line = getline(l:start)
         if l:start && len(l:line) >= 120
-            let l:lines = split(substitute(l:line, s:import_re, '\1{\n\2\n}\3', ''), '\n')
+            let l:lines = split(substitute(l:line, s:import_re, 'import {\n\2\n} from ''\3'';', ''), '\n')
             let l:imports = split(get(l:lines, 1, ''), ', *')
 
             call remove(l:lines, 1)
