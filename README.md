@@ -1,3 +1,3 @@
 # Sort Typescript Imports
 
-I made this plugin to sort Typescript imports. Install plugin and run `FixImports` command to fix/sort imports.
+Plugin to organize Typescript imports. Install plugin and run `FixImports` command to fix/sort imports.
