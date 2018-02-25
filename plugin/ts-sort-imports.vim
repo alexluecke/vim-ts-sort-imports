@@ -10,82 +10,101 @@ augroup END
 
 " Expected format for import parts:
 "     import { foo } from 'foo';
-let s:import_parts_re = '\([^{]*\){\([^}]\+\)}\(.*$\)'
+let s:import_start_re = '^\(\s*import\s*\)'
+let s:import_names_re = '{ *\([^}]\+\) *}'
+let s:import_end_re = ' *from *''\([^'']\+\)'';$'
+let s:import_re = join([s:import_start_re, s:import_names_re, s:import_end_re], '')
 let s:search_flags = 'W'
 
-function! s:SortCommaList(list) abort
-    let l:words = split(a:list, ',')
-    for i in range(0, len(l:words) - 1)
-        " Imports can be formatted as:
-        "     import { thing as thing2, otherThing } from './thing';
-        " So do not string all whitespace since the import string will become:
-        "     import { thingasthing2, otherThing }  from './thing';
-        let l:words[i] = substitute(l:words[i], '\s*$', '', 'g')
-        let l:words[i] = substitute(l:words[i], '^\s*', '', 'g')
-        let l:words[i] = substitute(l:words[i], '\s\+', ' ', 'g')
+function! s:AlphaSortList(list) abort
+    for i in range(0, len(a:list) - 1)
+        " List can be formatted as:
+        "     thing as thing2, otherThing
+        " -> do not strip all whitespace
+        let a:list[i] = substitute(a:list[i], '^\s*\(.\{-}\)\s*$', '\1', '')
+        let a:list[i] = substitute(a:list[i], '\s\+', ' ', 'g')
     endfor
-    return join(sort(l:words, 'i'), ', ')
+    return uniq(sort(a:list, 'i'))
 endfunction
 
-function s:GetSortedImportLine(line_pos)
-    let l:line = substitute(getline(a:line_pos), s:import_parts_re, '\2', '')
-    return substitute(getline(a:line_pos), '{ *[^}]* *}', '{ ' . <SID>SortCommaList(l:line) . ' }', '')
-endfunction
+function! s:SortAndReplaceImportLines()
+    let [l:start, l:end] = s:GetImportBlockStartEnd(1)
 
-function! s:SortAndReplaceImportLine(line_pos) abort
-    " begin sorting the items within the braces: { a, b, c }
-    if getline(a:line_pos) =~ '{[^}]*}'
-        let l:sorted = s:GetSortedImportLine(a:line_pos)
-        exec a:line_pos . ',' . a:line_pos . 'delete'
-        call append(a:line_pos - 1, l:sorted)
-    endif
-endfunction
+    while l:start && l:start < l:end
+        let buckets = {}
+        for line_number in range(l:start, l:end - 1)
+            let path = substitute(getline(l:line_number), s:import_re, '\3', '')
+            let imports = split(substitute(getline(l:line_number), s:import_re, '\2', ''), ',')
+            let buckets[path] = has_key(buckets, path) ?  buckets[path] + imports : imports
+        endfor
 
-function! s:GetImportStartEnd(start_row)
-    call cursor(a:start_row, 1)
-    return [search('^import', s:search_flags), search('; *$', s:search_flags)]
-endfunction
+        exec l:start . ',' . (l:end - 1) . 'delete'
 
-function! s:JoinLines(start, end)
-    call cursor(a:start, 1)
-    if a:start != a:end
-        let l:line = join(getline(a:start, a:end))
-        if !empty(l:line)
-            exec a:start . ',' . a:end . 'delete'
-            call append(a:start - 1, l:line)
-        endif
-    endif
-endfunction
+        for [path, imports] in items(buckets)
+            call append(l:start - 1, s:BuildImportStatement(join(s:AlphaSortList(imports), ', '), path))
+        endfor
 
-function! s:DoOneLinePerImport()
-    " makes lines like:
-    "     import {
-    "         foo
-    "     } from 'foo';
-    "     import {
-    "         bar
-    "     } from 'bar';
-    " into:
-    "     import { foo } from 'foo';
-    "     import { bar } from 'bar';
-    let [l:start, l:end] = s:GetImportStartEnd(1)
-    while l:start
-
-        call s:JoinLines(l:start, l:end)
-        call s:SortAndReplaceImportLine(l:start)
-
-        silent! s/ \+/ /g
-
-        let [l:start, l:end] = s:GetImportStartEnd(l:start)
+        let [l:start, l:end] = s:GetImportBlockStartEnd(l:start + len(buckets) + 1)
     endwhile
 endfunction
 
+function! s:BuildImportStatement(imports, path)
+    return 'import { ' . a:imports . ' } from ''' . a:path . ''';'
+endfunction
+
+function! s:GetImportStartEnd(start_row)
+    let l:saved_pos = [line('.'), col('.')]
+    let l:saved_line_count = line('$')
+    call cursor(a:start_row, 1)
+    let results = [search(s:import_start_re, 'Wnc'), search('; *$', 'Wnc')]
+    call cursor(l:saved_pos[0] + (line('$') - l:saved_line_count), l:saved_pos[1])
+    return results
+endfunction
+
+function! s:GetImportBlockStartEnd(start)
+    let l:saved_pos = [line('.'), col('.')]
+    let l:saved_line_count = line('$')
+    call cursor(a:start, 1)
+    let results = [search(s:import_start_re, 'Wnc'), search('^\($\|\(import\)\@!.\)', 'Wnc')]
+    call cursor(l:saved_pos[0] + (line('$') - l:saved_line_count), l:saved_pos[1])
+    return results
+endfunction
+
+function! s:JoinLines(start, end)
+    if a:start < a:end
+        let l:line = substitute(join(getline(a:start, a:end)), '^\s*', '', '')
+        exec a:start . ',' . a:end . 'delete'
+        call append(a:start - 1, l:line)
+    elseif a:start == a:end
+        call setline(a:start, substitute(getline(a:start), '^\s*', '', ''))
+    endif
+endfunction
+
+" Makes lines like:
+"     import {
+"         foo
+"     } from 'foo';
+"     import {
+"         bar
+"     } from 'bar';
+" into:
+"     import { foo } from 'foo';
+"     import { bar } from 'bar';
+function! s:DoOneLinePerImport()
+    let [l:start, l:end] = s:GetImportStartEnd(1)
+    while l:start
+        call s:JoinLines(l:start, l:end)
+        let [l:start, l:end] = s:GetImportStartEnd(l:start + 1)
+    endwhile
+endfunction
+
+" Sort and replace imports that were previously joined to one line. Blocks are groups of imports separated by a blank
+" line
 function! s:DoSortImportBlocks()
-    " sort and replace imports that were previously joined to one line
     let [l:start, l:end] = [1, 1]
     while l:start < line('$')
         call cursor(l:start, 1)
-        let [l:start, l:end] = [search('^import', s:search_flags), search('^\($\|\(import\)\@!.\)', s:search_flags) - 1]
+        let [l:start, l:end] = [search(s:import_start_re, s:search_flags), search('^\($\|\(import\)\@!.\)', s:search_flags) - 1]
 
         " stop when import search does not return result
         if !l:start | break | endif
@@ -115,7 +134,7 @@ function! s:DoFormatLongLineImports()
         let l:start = search('^import', s:search_flags)
         let l:line = getline(l:start)
         if l:start && len(l:line) >= &textwidth
-            let l:lines = split(substitute(l:line, s:import_parts_re, '\1{\n\2\n}\3', ''), '\n')
+            let l:lines = split(substitute(l:line, s:import_re, 'import {\n\2\n} from ''\3'';', ''), '\n')
             let l:imports = split(get(l:lines, 1, ''), ', *')
 
             call remove(l:lines, 1)
@@ -144,23 +163,26 @@ endfunction
 
 function! s:SortImportsPipeline()
     call s:DoOneLinePerImport()
+    call s:SortAndReplaceImportLines()
     call s:DoSortImportBlocks()
     call s:DoFormatLongLineImports()
+endfunction
+
+function! s:ClearInitialWhitespace()
+    while getline(1) =~ '^\s*$' && line('$') != 1
+        exec '1,1delete'
+    endwhile
 endfunction
 
 function! s:TsSortImports() abort
     let l:saved_pos = [line('.'), col('.')]
     let l:saved_line_count = line('$')
 
-    " this will only work if first line is blank
-    call append(0, '')
-
+    silent! call s:ClearInitialWhitespace();
     silent! call s:SortImportsPipeline()
 
-    " delete the added first line
-    exec '1,1delete'
-
     call cursor(l:saved_pos[0] + (line('$') - l:saved_line_count), l:saved_pos[1])
+    redraw!
 endfunction
 
 let &cpo = s:keepcpo
